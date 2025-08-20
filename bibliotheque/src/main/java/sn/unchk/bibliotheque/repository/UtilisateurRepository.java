@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import sn.unchk.bibliotheque.entity.Auteur;
 import sn.unchk.bibliotheque.entity.Utilisateur;
 import sn.unchk.bibliotheque.enums.Role;
 import sn.unchk.bibliotheque.enums.StatutEmprunt;
@@ -20,6 +21,9 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
 
     // Vérifier si un email existe déjà
     boolean existsByEmail(String email);
+
+    // Recherche exacte par nom
+    Optional<Utilisateur> findByNomIgnoreCase(String nom);
 
     // Recherche par nom (insensible à la casse)
     List<Utilisateur> findByNomContainingIgnoreCase(String nom);
