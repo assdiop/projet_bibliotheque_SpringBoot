@@ -24,7 +24,7 @@ public interface AuteurRepository extends JpaRepository<Auteur, Long> {
     // Auteurs nés dans une période
     List<Auteur> findByDateNaissanceBetween(LocalDate debut, LocalDate fin);
 
-    // Auteurs ayant publié des livres
+    // Auteurs ayant écrit au moins un livre
     @Query("SELECT DISTINCT a FROM Auteur a WHERE SIZE(a.livres) > 0")
     List<Auteur> findAuteursAvecLivres();
 

@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface EmpruntRepository extends JpaRepository<EmpruntRepository, Long> {
+public interface EmpruntRepository extends JpaRepository<Emprunt, Long> {
     // Emprunts par utilisateur
     List<Emprunt> findByUtilisateur(Utilisateur utilisateur);
 
