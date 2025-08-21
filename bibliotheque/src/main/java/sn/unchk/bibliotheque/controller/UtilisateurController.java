@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController      // ✅ API REST avec retour auto en JSON
 @RequestMapping("/api/utilisateurs")    // ✅ Préfixe d'URL pour toutes les routes
-@CrossOrigin(origins = "http://localhost:8080") // Autorise un domaine spécifique du frontend
+@CrossOrigin(origins = "*") // Autorise un domaine spécifique du frontend
 public class UtilisateurController {
 
     @Autowired

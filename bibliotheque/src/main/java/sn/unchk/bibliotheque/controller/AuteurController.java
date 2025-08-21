@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/auteurs")
-@CrossOrigin(origins = "http://localhost:8080")
+@CrossOrigin(origins = "*")
 
 public class AuteurController {
 
