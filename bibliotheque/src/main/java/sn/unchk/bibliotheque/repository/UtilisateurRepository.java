@@ -19,6 +19,8 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     // Recherche par email (pour l'authentification)
     Optional<Utilisateur> findByEmail(String email);
 
+    Optional<Utilisateur> findByEmailIgnoreCase(String email);
+
     // Vérifier si un email existe déjà
     boolean existsByEmail(String email);
 
@@ -37,4 +39,6 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     // Utilisateurs avec des emprunts en cours
     @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.emprunts e WHERE e.statut = :statut")
     List<Utilisateur> findUtilisateursAvecEmprunts(@Param("statut") StatutEmprunt statut);
+
+
 }

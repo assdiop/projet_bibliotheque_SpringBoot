@@ -19,7 +19,7 @@ public class Auteur {
     @Column(columnDefinition = "TEXT")
     private String biographie;
 
-    @Column(name = "date_naissance")
+    @Column(name = "`dateNaissance`")
     private LocalDate dateNaissance;
 
     @OneToMany(mappedBy = "auteur", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

@@ -32,16 +32,17 @@ public class UtilisateurDTO {
         this.email = email;
         this.motDePasse = motDePasse;
         this.role = role;
+        this.dateInscription= LocalDate.now();
     }
 
     // Getters et Setters
-    public Long getId() {
+   /* public Long getId() {
         return id;
     }
 
     public void setId(Long id) {
         this.id = id;
-    }
+    }*/
 
     public String getNom() {
         return nom;
@@ -81,5 +82,16 @@ public class UtilisateurDTO {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    @Override
+    public String toString() {
+        return "UtilisateurDTO{" +
+                "nom='" + nom + '\'' +
+                ", email='" + email + '\'' +
+                ", motDePasse='[PROTECTED]'" +
+                ", dateInscription=" + dateInscription +
+                ", role=" + role +
+                '}';
     }
 }

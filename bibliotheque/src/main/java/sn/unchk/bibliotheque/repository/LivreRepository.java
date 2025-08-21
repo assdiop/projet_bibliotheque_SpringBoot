@@ -52,4 +52,6 @@ public interface LivreRepository extends JpaRepository<Livre, Long> {
     // Genres distincts
     @Query("SELECT DISTINCT l.genre FROM Livre l WHERE l.genre IS NOT NULL ORDER BY l.genre")
     List<String> findDistinctGenres();
+
+    List<Livre> findByDisponibleTrue();
 }

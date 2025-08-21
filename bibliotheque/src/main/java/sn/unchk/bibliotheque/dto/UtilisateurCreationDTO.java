@@ -45,7 +45,7 @@ public class UtilisateurCreationDTO {
         this.email = email;
     }
 
-    public String getMotDePasse() {
+    public String getmotdepasse() {
         return motDePasse;
     }
 
