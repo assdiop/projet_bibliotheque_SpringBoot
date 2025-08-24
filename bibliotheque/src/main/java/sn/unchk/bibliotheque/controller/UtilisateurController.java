@@ -22,27 +22,7 @@ public class UtilisateurController {
     @Autowired
     private UtilisateurService utilisateurService;
 
-    /**
-     * Méthode utilitaire pour récupérer l'ID de l'utilisateur connecté
-     * À adapter selon votre système d'authentification
-     */
-    private Long getCurrentUserId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new BusinessException("Utilisateur non authentifié");
-        }
-
-        // Adaptez cette logique selon votre implémentation d'authentification
-        // Exemple si vous stockez l'ID dans le principal
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        // Supposons que le username soit l'ID ou que vous ayez une méthode pour récupérer l'ID
-        // return Long.valueOf(userDetails.getUsername()); // Si username = ID
-
-        // Ou si vous avez un service pour récupérer l'utilisateur par username
-        Utilisateur utilisateur = utilisateurService.rechercherUtilisateurs(userDetails.getUsername()).get(0);
-        return utilisateur.getId();
-    }
-
-    // ==================== ENDPOINTS PUBLICS (LECTURE) ====================
+    // ==================== ENDPOINTS CRUD ====================
 
     /**
      * Obtenir tous les utilisateurs
@@ -87,19 +67,14 @@ public class UtilisateurController {
         }
     }
 
-    // ==================== ENDPOINTS ADMIN SEULEMENT ====================
-
     /**
-     * Créer un nouvel utilisateur (ADMIN seulement)
-     * POST /api/utilisateurs/admin
+     * Créer un nouvel utilisateur
+     * POST /api/utilisateurs
      */
-    @PostMapping("/admin")
-    public ResponseEntity<?> creerUtilisateur(
-            @Valid @RequestBody UtilisateurDTO utilisateurDTO,
-            Authentication authentication) {
+    @PostMapping
+    public ResponseEntity<?> creerUtilisateur(@Valid @RequestBody UtilisateurDTO utilisateurDTO) {
         try {
-            Long idAdmin = getCurrentUserId(authentication);
-            Utilisateur nouvelUtilisateur = utilisateurService.creerUtilisateurAvecValidation(utilisateurDTO, idAdmin);
+            Utilisateur nouvelUtilisateur = utilisateurService.creerUtilisateurAvecValidation(utilisateurDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(nouvelUtilisateur);
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -110,17 +85,15 @@ public class UtilisateurController {
     }
 
     /**
-     * Mettre à jour un utilisateur (ADMIN seulement)
-     * PUT /api/utilisateurs/admin/{id}
+     * Mettre à jour un utilisateur
+     * PUT /api/utilisateurs/{id}
      */
-    @PutMapping("/admin/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<?> mettreAJourUtilisateur(
             @PathVariable Long id,
-            @Valid @RequestBody UtilisateurDTO utilisateurDTO,
-            Authentication authentication) {
+            @Valid @RequestBody UtilisateurDTO utilisateurDTO) {
         try {
-            Long idAdmin = getCurrentUserId(authentication);
-            Utilisateur utilisateurModifie = utilisateurService.mettreAJourUtilisateur(id, utilisateurDTO, idAdmin);
+            Utilisateur utilisateurModifie = utilisateurService.mettreAJourUtilisateur(id, utilisateurDTO);
             return ResponseEntity.ok(utilisateurModifie);
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -131,16 +104,13 @@ public class UtilisateurController {
     }
 
     /**
-     * Supprimer un utilisateur (ADMIN seulement)
-     * DELETE /api/utilisateurs/admin/{id}
+     * Supprimer un utilisateur
+     * DELETE /api/utilisateurs/{id}
      */
-    @DeleteMapping("/admin/{id}")
-    public ResponseEntity<?> supprimerUtilisateur(
-            @PathVariable Long id,
-            Authentication authentication) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerUtilisateur(@PathVariable Long id) {
         try {
-            Long idAdmin = getCurrentUserId(authentication);
-            utilisateurService.supprimerUtilisateur(id, idAdmin);
+            utilisateurService.supprimerUtilisateur(id);
             return ResponseEntity.ok("Utilisateur supprimé avec succès");
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -150,63 +120,22 @@ public class UtilisateurController {
         }
     }
 
-    // ==================== ENDPOINT UTILISATEUR (AUTO-MODIFICATION) ====================
-
     /**
-     * Modifier ses propres informations
-     * PUT /api/utilisateurs/mon-profil
+     * Modifier les informations d'un utilisateur
+     * PUT /api/utilisateurs/modifier/{id}
      */
-    @PutMapping("/mon-profil")
-    public ResponseEntity<?> modifierMonProfil(
-            @Valid @RequestBody UtilisateurDTO utilisateurDTO,
-            Authentication authentication) {
+    @PutMapping("/modifier/{id}")
+    public ResponseEntity<?> modifierInformationsUtilisateur(
+            @PathVariable Long id,
+            @Valid @RequestBody UtilisateurDTO utilisateurDTO) {
         try {
-            Long idUtilisateur = getCurrentUserId(authentication);
-            Utilisateur utilisateurModifie = utilisateurService.modifierSesPropresInformations(
-                    idUtilisateur, utilisateurDTO, idUtilisateur);
+            Utilisateur utilisateurModifie = utilisateurService.modifierInformationsUtilisateur(id, utilisateurDTO);
             return ResponseEntity.ok(utilisateurModifie);
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de la modification du profil");
-        }
-    }
-
-    /**
-     * Obtenir ses propres informations
-     * GET /api/utilisateurs/mon-profil
-     */
-    @GetMapping("/mon-profil")
-    public ResponseEntity<?> obtenirMonProfil(Authentication authentication) {
-        try {
-            Long idUtilisateur = getCurrentUserId(authentication);
-            Utilisateur utilisateur = utilisateurService.obtenirUtilisateurParId(idUtilisateur);
-            return ResponseEntity.ok(utilisateur);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Profil utilisateur non trouvé");
-        }
-    }
-
-    // ==================== ENDPOINTS DE TEST (À SUPPRIMER EN PRODUCTION) ====================
-
-    /**
-     * Endpoint de test pour créer un utilisateur sans authentification
-     * À SUPPRIMER EN PRODUCTION
-     */
-    @PostMapping("/test")
-    public ResponseEntity<?> creerUtilisateurTest(@Valid @RequestBody UtilisateurDTO utilisateurDTO) {
-        try {
-            // Utiliser un ID admin fictif pour les tests
-            Long idAdminTest = 1L; // Assurez-vous qu'un utilisateur avec ID=1 et role=ADMIN existe
-            Utilisateur nouvelUtilisateur = utilisateurService.creerUtilisateurAvecValidation(utilisateurDTO, idAdminTest);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nouvelUtilisateur);
-        } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de la création de l'utilisateur: " + e.getMessage());
+                    .body("Erreur lors de la modification des informations");
         }
     }
 }

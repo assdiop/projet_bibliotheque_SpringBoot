@@ -26,27 +26,7 @@ public class LivreController {
     @Autowired
     private LivreService livreService;
 
-    @Autowired
-    private UtilisateurService utilisateurService;
-
-    /**
-     * Méthode utilitaire pour récupérer l'ID de l'utilisateur connecté
-     */
-    private Long getCurrentUserId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new BusinessException("Utilisateur non authentifié");
-        }
-
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        // Rechercher l'utilisateur par nom d'utilisateur
-        List<Utilisateur> utilisateurs = utilisateurService.rechercherUtilisateurs(userDetails.getUsername());
-        if (utilisateurs.isEmpty()) {
-            throw new BusinessException("Utilisateur non trouvé");
-        }
-        return utilisateurs.get(0).getId();
-    }
-
-    // ==================== ENDPOINTS PUBLICS (LECTURE) ====================
+    // ==================== ENDPOINTS DE LECTURE ====================
 
     /**
      * Obtenir tous les livres
@@ -197,19 +177,16 @@ public class LivreController {
         }
     }
 
-    // ==================== ENDPOINTS ADMIN SEULEMENT ====================
+    // ==================== ENDPOINTS CRUD ====================
 
     /**
-     * Ajouter un nouveau livre (ADMIN seulement)
-     * POST /api/livres/admin
+     * Ajouter un nouveau livre
+     * POST /api/livres
      */
-    @PostMapping("/admin")
-    public ResponseEntity<?> ajouterLivre(
-            @Valid @RequestBody LivreDTO livreDTO,
-            Authentication authentication) {
+    @PostMapping
+    public ResponseEntity<?> ajouterLivre(@Valid @RequestBody LivreDTO livreDTO) {
         try {
-            Long idAdmin = getCurrentUserId(authentication);
-            Livre nouveauLivre = livreService.ajouterLivre(livreDTO, idAdmin);
+            Livre nouveauLivre = livreService.ajouterLivre(livreDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(nouveauLivre);
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -220,99 +197,15 @@ public class LivreController {
     }
 
     /**
-     * Modifier un livre (ADMIN seulement)
-     * PUT /api/livres/admin/{id}
+     * Modifier un livre
+     * PUT /api/livres/{id}
      */
-    @PutMapping("/admin/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<?> modifierLivre(
-            @PathVariable Long id,
-            @Valid @RequestBody LivreDTO livreDTO,
-            Authentication authentication) {
-        try {
-            Long idAdmin = getCurrentUserId(authentication);
-            Livre livreModifie = livreService.modifierLivre(id, livreDTO, idAdmin);
-            return ResponseEntity.ok(livreModifie);
-        } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Livre non trouvé ou erreur lors de la modification : " + e.getMessage());
-        }
-    }
-
-    /**
-     * Supprimer un livre par ID (ADMIN seulement)
-     * DELETE /api/livres/admin/{id}
-     */
-    @DeleteMapping("/admin/{id}")
-    public ResponseEntity<?> supprimerLivre(
-            @PathVariable Long id,
-            Authentication authentication) {
-        try {
-            Long idAdmin = getCurrentUserId(authentication);
-            livreService.supprimerLivre(id, idAdmin);
-            return ResponseEntity.ok("Livre supprimé avec succès");
-        } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Livre non trouvé ou erreur lors de la suppression : " + e.getMessage());
-        }
-    }
-
-    /**
-     * Supprimer un livre par titre et auteur (ADMIN seulement)
-     * DELETE /api/livres/admin/par-titre-auteur?titre=...&auteur=...
-     */
-    @DeleteMapping("/admin/par-titre-auteur")
-    public ResponseEntity<?> supprimerLivreParTitreEtAuteur(
-            @RequestParam String titre,
-            @RequestParam String auteur,
-            Authentication authentication) {
-        try {
-            Long idAdmin = getCurrentUserId(authentication);
-            livreService.supprimerLivreParTitreEtAuteur(titre, auteur, idAdmin);
-            return ResponseEntity.ok("Livre '" + titre + "' par " + auteur + " supprimé avec succès");
-        } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Livre non trouvé ou erreur lors de la suppression : " + e.getMessage());
-        }
-    }
-
-    // ==================== ENDPOINTS DE TEST (À SUPPRIMER EN PRODUCTION) ====================
-
-    /**
-     * Endpoint de test pour ajouter un livre sans authentification
-     * À SUPPRIMER EN PRODUCTION
-     */
-    @PostMapping("/test")
-    public ResponseEntity<?> ajouterLivreTest(@Valid @RequestBody LivreDTO livreDTO) {
-        try {
-            // Utiliser un ID admin fictif pour les tests (assurez-vous qu'un admin avec ID=1 existe)
-            Long idAdminTest = 1L;
-            Livre nouveauLivre = livreService.ajouterLivre(livreDTO, idAdminTest);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nouveauLivre);
-        } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de l'ajout du livre : " + e.getMessage());
-        }
-    }
-
-    /**
-     * Endpoint de test pour modifier un livre sans authentification
-     * À SUPPRIMER EN PRODUCTION
-     */
-    @PutMapping("/test/{id}")
-    public ResponseEntity<?> modifierLivreTest(
             @PathVariable Long id,
             @Valid @RequestBody LivreDTO livreDTO) {
         try {
-            Long idAdminTest = 1L;
-            Livre livreModifie = livreService.modifierLivre(id, livreDTO, idAdminTest);
+            Livre livreModifie = livreService.modifierLivre(id, livreDTO);
             return ResponseEntity.ok(livreModifie);
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -323,15 +216,33 @@ public class LivreController {
     }
 
     /**
-     * Endpoint de test pour supprimer un livre sans authentification
-     * À SUPPRIMER EN PRODUCTION
+     * Supprimer un livre par ID
+     * DELETE /api/livres/{id}
      */
-    @DeleteMapping("/test/{id}")
-    public ResponseEntity<?> supprimerLivreTest(@PathVariable Long id) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerLivre(@PathVariable Long id) {
         try {
-            Long idAdminTest = 1L;
-            livreService.supprimerLivre(id, idAdminTest);
+            livreService.supprimerLivre(id);
             return ResponseEntity.ok("Livre supprimé avec succès");
+        } catch (BusinessException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Livre non trouvé ou erreur lors de la suppression : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprimer un livre par titre et auteur
+     * DELETE /api/livres/par-titre-auteur?titre=...&auteur=...
+     */
+    @DeleteMapping("/par-titre-auteur")
+    public ResponseEntity<?> supprimerLivreParTitreEtAuteur(
+            @RequestParam String titre,
+            @RequestParam String auteur) {
+        try {
+            livreService.supprimerLivreParTitreEtAuteur(titre, auteur);
+            return ResponseEntity.ok("Livre '" + titre + "' par " + auteur + " supprimé avec succès");
         } catch (BusinessException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {

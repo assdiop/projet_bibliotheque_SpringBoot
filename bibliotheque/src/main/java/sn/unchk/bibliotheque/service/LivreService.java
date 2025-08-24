@@ -24,21 +24,6 @@ public class LivreService {
     @Autowired
     private AuteurService auteurService;
 
-    @Autowired
-    private UtilisateurService utilisateurService;
-
-    /**
-     * Vérifier si l'utilisateur connecté a le rôle admin
-     */
-    private void verifierDroitsAdmin(Long idUtilisateurConnecte) {
-        Utilisateur utilisateurConnecte = utilisateurService.obtenirUtilisateurParId(idUtilisateurConnecte);
-
-        if (utilisateurConnecte.getRole() == null ||
-                !utilisateurConnecte.getRole().equals(Role.ADMIN)) {
-            throw new BusinessException("Accès refusé : seuls les administrateurs peuvent effectuer cette opération");
-        }
-    }
-
     /**
      * Obtenir un auteur existant par nom
      */
@@ -63,15 +48,12 @@ public class LivreService {
         return auteurTrouve.get();
     }
 
-    // ==================== MÉTHODES ADMIN (CRUD) ====================
+    // ==================== MÉTHODES CRUD ====================
 
     /**
-     * Ajouter un nouveau livre (ADMIN seulement)
+     * Ajouter un nouveau livre
      */
-    public Livre ajouterLivre(LivreDTO livreDTO, Long idUtilisateurConnecte) {
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
-
+    public Livre ajouterLivre(LivreDTO livreDTO) {
         // Validation des données d'entrée
         if (livreDTO.getTitre() == null || livreDTO.getTitre().trim().isEmpty()) {
             throw new BusinessException("Le titre du livre est obligatoire");
@@ -107,12 +89,9 @@ public class LivreService {
     }
 
     /**
-     * Modifier les détails d'un livre (ADMIN seulement)
+     * Modifier les détails d'un livre
      */
-    public Livre modifierLivre(Long idLivre, LivreDTO livreDTO, Long idUtilisateurConnecte) {
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
-
+    public Livre modifierLivre(Long idLivre, LivreDTO livreDTO) {
         // Récupérer le livre existant
         Livre livre = livreRepository.findById(idLivre)
                 .orElseThrow(() -> new EntityNotFoundException("Livre non trouvé avec l'ID : " + idLivre));
@@ -154,12 +133,9 @@ public class LivreService {
     }
 
     /**
-     * Supprimer un livre par titre et auteur (ADMIN seulement)
+     * Supprimer un livre par titre et auteur
      */
-    public void supprimerLivreParTitreEtAuteur(String titre, String nomAuteur, Long idUtilisateurConnecte) {
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
-
+    public void supprimerLivreParTitreEtAuteur(String titre, String nomAuteur) {
         // Validation des paramètres
         if (titre == null || titre.trim().isEmpty()) {
             throw new BusinessException("Le titre du livre est obligatoire pour la suppression");
@@ -208,12 +184,9 @@ public class LivreService {
     }
 
     /**
-     * Supprimer un livre par ID (ADMIN seulement)
+     * Supprimer un livre par ID
      */
-    public void supprimerLivre(Long idLivre, Long idUtilisateurConnecte) {
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
-
+    public void supprimerLivre(Long idLivre) {
         Livre livre = livreRepository.findById(idLivre)
                 .orElseThrow(() -> new EntityNotFoundException("Livre non trouvé avec l'ID : " + idLivre));
 
@@ -231,7 +204,7 @@ public class LivreService {
         System.out.println("Livre supprimé avec l'ID : " + idLivre);
     }
 
-    // ==================== MÉTHODES PUBLIQUES (LECTURE) ====================
+    // ==================== MÉTHODES DE LECTURE ====================
 
     /**
      * Obtenir tous les livres

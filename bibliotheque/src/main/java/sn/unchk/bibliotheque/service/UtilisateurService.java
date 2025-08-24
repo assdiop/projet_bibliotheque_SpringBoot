@@ -19,7 +19,6 @@ import java.util.Optional;
 
 @Service
 public class UtilisateurService {
-
     @Autowired
     private UtilisateurRepository utilisateurRepository;
 
@@ -27,27 +26,11 @@ public class UtilisateurService {
     private PasswordEncoder passwordEncoder;
 
     /**
-     * Vérifier si l'utilisateur connecté a le rôle admin
-     */
-    private void verifierDroitsAdmin(Long idUtilisateurConnecte) {
-        Utilisateur utilisateurConnecte = obtenirUtilisateurParId(idUtilisateurConnecte);
-
-        if (utilisateurConnecte.getRole() == null ||
-                !utilisateurConnecte.getRole().equals(Role.ADMIN)) {
-            throw new BusinessException("Accès refusé : seuls les administrateurs peuvent effectuer cette opération");
-        }
-    }
-
-    /**
      * Créer un nouveau utilisateur
      * Cette méthode utilise automatiquement save() qui génère l'INSERT
      * avec gestion d'erreur plus fine
-     * RESTREINT AUX ADMINS SEULEMENT
      */
-    public Utilisateur creerUtilisateurAvecValidation(UtilisateurDTO utilisateurDTO, Long idUtilisateurConnecte) {
-
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
+    public Utilisateur creerUtilisateurAvecValidation(UtilisateurDTO utilisateurDTO) {
 
         // Validation des données d'entrée
         if (utilisateurDTO.getNom() == null || utilisateurDTO.getNom().trim().isEmpty()) {
@@ -78,9 +61,9 @@ public class UtilisateurService {
             throw new BusinessException("Un utilisateur avec cet email existe déjà : " + utilisateurDTO.getEmail());
         }
 
-        // verifier si la date d'inscription est null
-        if (utilisateurDTO.getDateInscription() == null ) {
-            throw new BusinessException("La date d'inscription ne peut pas être null ");
+        // vérifier si la date d'inscription est null
+        if (utilisateurDTO.getDateInscription() == null) {
+            throw new BusinessException("La date d'inscription ne peut pas être null");
         }
 
         // Créer et sauvegarder
@@ -130,12 +113,8 @@ public class UtilisateurService {
 
     /**
      * Mettre à jour un utilisateur
-     * RESTREINT AUX ADMINS SEULEMENT
      */
-    public Utilisateur mettreAJourUtilisateur(Long id, UtilisateurDTO utilisateurDTO, Long idUtilisateurConnecte) {
-
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
+    public Utilisateur mettreAJourUtilisateur(Long id, UtilisateurDTO utilisateurDTO) {
 
         Utilisateur utilisateur = obtenirUtilisateurParId(id);
 
@@ -176,12 +155,8 @@ public class UtilisateurService {
 
     /**
      * Supprimer un utilisateur
-     * RESTREINT AUX ADMINS SEULEMENT
      */
-    public void supprimerUtilisateur(Long id, Long idUtilisateurConnecte) {
-
-        // Vérifier les droits d'administration
-        verifierDroitsAdmin(idUtilisateurConnecte);
+    public void supprimerUtilisateur(Long id) {
 
         Utilisateur utilisateur = obtenirUtilisateurParId(id);
 
@@ -194,15 +169,9 @@ public class UtilisateurService {
     }
 
     /**
-     * Méthode pour permettre à un utilisateur de modifier ses propres informations (limitées)
-     * Un utilisateur peut modifier ses propres informations de base mais pas son rôle
+     * Méthode pour modifier les informations d'un utilisateur
      */
-    public Utilisateur modifierSesPropresInformations(Long idUtilisateur, UtilisateurDTO utilisateurDTO, Long idUtilisateurConnecte) {
-
-        // Vérifier que l'utilisateur modifie bien ses propres informations
-        if (!idUtilisateur.equals(idUtilisateurConnecte)) {
-            throw new BusinessException("Vous ne pouvez modifier que vos propres informations");
-        }
+    public Utilisateur modifierInformationsUtilisateur(Long idUtilisateur, UtilisateurDTO utilisateurDTO) {
 
         Utilisateur utilisateur = obtenirUtilisateurParId(idUtilisateur);
 
@@ -214,11 +183,21 @@ public class UtilisateurService {
             }
         }
 
-        // Mettre à jour seulement les champs autorisés (pas le rôle ni la date d'inscription)
+        // Vérifier si le nouvel email n'est pas déjà pris par un autre utilisateur
+        if (!utilisateur.getEmail().equalsIgnoreCase(utilisateurDTO.getEmail())) {
+            Optional<Utilisateur> utilisateurExistantEmail = utilisateurRepository.findByEmailIgnoreCase(utilisateurDTO.getEmail());
+            if (utilisateurExistantEmail.isPresent() && !utilisateurExistantEmail.get().getId().equals(idUtilisateur)) {
+                throw new BusinessException("Un utilisateur avec cet email existe déjà");
+            }
+        }
+
+        // Mettre à jour les champs
         utilisateur.setEmail(utilisateurDTO.getEmail().trim().toLowerCase());
         utilisateur.setNom(utilisateurDTO.getNom().trim());
+        utilisateur.setDateInscription(utilisateurDTO.getDateInscription());
+        utilisateur.setRole(utilisateurDTO.getRole());
 
-        // Permettre à l'utilisateur de changer son propre mot de passe
+        // Permettre le changement du mot de passe
         if (utilisateurDTO.getMotDePasse() != null && !utilisateurDTO.getMotDePasse().trim().isEmpty()) {
             if (utilisateurDTO.getMotDePasse().length() < 6) {
                 throw new BusinessException("Le mot de passe doit contenir au moins 6 caractères");
@@ -227,9 +206,6 @@ public class UtilisateurService {
             utilisateur.setMotDePasse(motDePasseHash);
         }
 
-        // Note: le rôle et la date d'inscription ne sont pas modifiables par l'utilisateur lui-même
-
         return utilisateurRepository.save(utilisateur);
     }
-
 }
