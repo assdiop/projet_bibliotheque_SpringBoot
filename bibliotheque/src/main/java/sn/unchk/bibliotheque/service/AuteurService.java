@@ -2,6 +2,7 @@ package sn.unchk.bibliotheque.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import sn.unchk.bibliotheque.dto.AuteurDTO;
 import sn.unchk.bibliotheque.entity.Auteur;
 import sn.unchk.bibliotheque.exception.BusinessException;
@@ -83,7 +84,7 @@ public class AuteurService {
 
     /**
      * Mettre à jour un auteur
-     */
+
     public Auteur mettreAJourAuteur(Long id, AuteurDTO auteurDTO) {
         Auteur auteur = obtenirAuteurParId(id);
 
@@ -102,6 +103,42 @@ public class AuteurService {
 
         // save() détecte que l'entité existe déjà et fait un UPDATE
         return auteurRepository.save(auteur);
+    }   */
+
+    public Auteur mettreAJourAuteur(Long id, AuteurDTO auteurDTO) {
+        // Validations d'entrée
+        if (id == null) {
+            throw new IllegalArgumentException("L'ID ne peut pas être null");
+        }
+        if (auteurDTO == null) {
+            throw new IllegalArgumentException("Les données auteur ne peuvent pas être null");
+        }
+
+        // Validation des champs requis
+        if (auteurDTO.getNom() == null || auteurDTO.getNom().trim().isEmpty()) {
+            throw new BusinessException("Le nom de l'auteur est obligatoire");
+        }
+
+        Auteur auteur = obtenirAuteurParId(id);
+
+        // Vérification unicité (logique existante - correcte)
+        if (!auteur.getNom().equalsIgnoreCase(auteurDTO.getNom())) {
+            Optional<Auteur> auteurExistant = auteurRepository.findByNomIgnoreCase(auteurDTO.getNom());
+            if (auteurExistant.isPresent() && !auteurExistant.get().getId().equals(id)) {
+                throw new BusinessException("Un autre auteur avec ce nom existe déjà");
+            }
+        }
+
+        // Mise à jour avec nettoyage des données
+        auteur.setNom(auteurDTO.getNom().trim());
+        auteur.setBiographie(auteurDTO.getBiographie() != null ? auteurDTO.getBiographie().trim() : null);
+        auteur.setDateNaissance(auteurDTO.getDateNaissance());
+
+        try {
+            return  auteurRepository.save(auteur);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException("Erreur lors de la mise à jour de l'auteur");
+        }
     }
 
     /**

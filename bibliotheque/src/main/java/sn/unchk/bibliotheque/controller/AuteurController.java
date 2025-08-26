@@ -14,12 +14,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auteurs")
 @CrossOrigin(origins = "*")
 
 public class AuteurController {
+
 
     @Autowired
     private AuteurService auteurService;
@@ -29,7 +31,6 @@ public class AuteurController {
      * POST /api/auteurs
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')") // Seuls les admins peuvent créer des auteurs
     public ResponseEntity<Auteur> creerAuteur(@Valid @RequestBody AuteurDTO auteurDTO) {
         try {
             Auteur auteur = auteurService.creerAuteurAvecValidation(auteurDTO);
@@ -74,20 +75,32 @@ public class AuteurController {
     }
 
     /**
-     * Mettre à jour un auteur
-     * PUT /api/auteurs/1
+     * Mettre à jour un auteur existant
+     * PUT /api/auteurs/{id}
+     *
+     * @param id L'identifiant de l'auteur à modifier
+     * @param auteurDTO Les nouvelles données de l'auteur
+     * @return L'auteur modifié
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Auteur> mettreAJourAuteur(@PathVariable Long id,
-                                                    @Valid @RequestBody AuteurDTO auteurDTO) {
+    public ResponseEntity<?> mettreAJourAuteur(
+            @PathVariable Long id,
+            @Valid @RequestBody AuteurDTO auteurDTO) {
         try {
-            Auteur auteur = auteurService.mettreAJourAuteur(id, auteurDTO);
-            return ResponseEntity.ok(auteur);
+            Auteur auteurModifie = auteurService.mettreAJourAuteur(id, auteurDTO);
+            return ResponseEntity.ok(auteurModifie);
         } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Auteur avec l'ID " + id + " introuvable");
         } catch (BusinessException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Erreur de validation : " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Paramètres invalides : " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur lors de la modification de l'auteur");
         }
     }
 
@@ -96,7 +109,6 @@ public class AuteurController {
      * DELETE /api/auteurs/1
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> supprimerAuteur(@PathVariable Long id) {
         try {
             auteurService.supprimerAuteur(id);
