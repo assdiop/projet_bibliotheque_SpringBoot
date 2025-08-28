@@ -1,22 +1,25 @@
 package sn.unchk.bibliotheque.controller;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import sn.unchk.bibliotheque.dto.LivreDTO;
 import sn.unchk.bibliotheque.entity.Livre;
-import sn.unchk.bibliotheque.entity.Utilisateur;
 import sn.unchk.bibliotheque.exception.BusinessException;
 import sn.unchk.bibliotheque.service.LivreService;
-import sn.unchk.bibliotheque.service.UtilisateurService;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/livres")
@@ -28,10 +31,6 @@ public class LivreController {
 
     // ==================== ENDPOINTS DE LECTURE ====================
 
-    /**
-     * Obtenir tous les livres
-     * GET /api/livres
-     */
     @GetMapping
     public ResponseEntity<List<Livre>> obtenirTousLesLivres() {
         try {
@@ -42,10 +41,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Obtenir un livre par ID
-     * GET /api/livres/{id}
-     */
     @GetMapping("/{id}")
     public ResponseEntity<Livre> obtenirLivreParId(@PathVariable Long id) {
         try {
@@ -56,10 +51,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Rechercher des livres par titre
-     * GET /api/livres/recherche/titre?titre=...
-     */
     @GetMapping("/recherche/titre")
     public ResponseEntity<List<Livre>> rechercherParTitre(
             @RequestParam(required = false) String titre) {
@@ -71,10 +62,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Rechercher des livres par auteur
-     * GET /api/livres/recherche/auteur?auteur=...
-     */
     @GetMapping("/recherche/auteur")
     public ResponseEntity<List<Livre>> rechercherParAuteur(
             @RequestParam(required = false) String auteur) {
@@ -86,10 +73,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Rechercher des livres par genre
-     * GET /api/livres/recherche/genre?genre=...
-     */
     @GetMapping("/recherche/genre")
     public ResponseEntity<List<Livre>> rechercherParGenre(
             @RequestParam(required = false) String genre) {
@@ -101,10 +84,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Obtenir les livres disponibles
-     * GET /api/livres/disponibles
-     */
     @GetMapping("/disponibles")
     public ResponseEntity<List<Livre>> obtenirLivresDisponibles() {
         try {
@@ -115,10 +94,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Recherche multi-critères
-     * GET /api/livres/recherche?titre=...&auteur=...&genre=...&disponible=true
-     */
     @GetMapping("/recherche")
     public ResponseEntity<List<Livre>> rechercherLivres(
             @RequestParam(required = false) String titre,
@@ -133,10 +108,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Obtenir les genres distincts
-     * GET /api/livres/genres
-     */
     @GetMapping("/genres")
     public ResponseEntity<List<String>> obtenirGenresDistincts() {
         try {
@@ -147,10 +118,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Obtenir les livres les plus empruntés
-     * GET /api/livres/populaires
-     */
     @GetMapping("/populaires")
     public ResponseEntity<List<Object[]>> obtenirLivresPopulaires() {
         try {
@@ -161,10 +128,6 @@ public class LivreController {
         }
     }
 
-    /**
-     * Obtenir les livres publiés dans une période
-     * GET /api/livres/periode?debut=2020-01-01&fin=2023-12-31
-     */
     @GetMapping("/periode")
     public ResponseEntity<List<Livre>> obtenirLivresParPeriode(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
@@ -177,28 +140,51 @@ public class LivreController {
         }
     }
 
-    // ==================== ENDPOINTS CRUD ====================
+    // ==================== ENDPOINTS CRUD AMÉLIORÉS ====================
 
     /**
-     * Ajouter un nouveau livre
-     * POST /api/livres
+     * Ajouter un nouveau livre - VERSION CORRIGÉE
      */
     @PostMapping
     public ResponseEntity<?> ajouterLivre(@Valid @RequestBody LivreDTO livreDTO) {
         try {
+            System.out.println("Données reçues - Titre: " + livreDTO.getTitre() +
+                    ", AuteurId: " + livreDTO.getAuteurId());
+
+            // Appeler votre méthode existante du service
             Livre nouveauLivre = livreService.ajouterLivre(livreDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nouveauLivre);
+
+            // Créer une réponse simple sans référence circulaire
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", nouveauLivre.getId());
+            response.put("titre", nouveauLivre.getTitre());
+            response.put("genre", nouveauLivre.getGenre());
+            response.put("datePublication", nouveauLivre.getDatePublication());
+            response.put("disponible", nouveauLivre.getDisponible());
+            response.put("auteurId", nouveauLivre.getAuteurId());
+            response.put("nomAuteur", nouveauLivre.getNomAuteur());
+            response.put("message", "Livre créé avec succès");
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
         } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage(), "timestamp", LocalDateTime.now()));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Auteur non trouvé avec l'ID: " + livreDTO.getAuteurId(),
+                            "timestamp", LocalDateTime.now()));
         } catch (Exception e) {
+            e.printStackTrace(); // Pour le debug
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de l'ajout du livre : " + e.getMessage());
+                    .body(Map.of("error", "Erreur interne du serveur",
+                            "details", e.getMessage(),
+                            "timestamp", LocalDateTime.now()));
         }
     }
 
     /**
-     * Modifier un livre
-     * PUT /api/livres/{id}
+     * Modifier un nouveau livre
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> modifierLivre(
@@ -206,49 +192,74 @@ public class LivreController {
             @Valid @RequestBody LivreDTO livreDTO) {
         try {
             Livre livreModifie = livreService.modifierLivre(id, livreDTO);
-            return ResponseEntity.ok(livreModifie);
+
+            // Réponse simple sans référence circulaire
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", livreModifie.getId());
+            response.put("titre", livreModifie.getTitre());
+            response.put("genre", livreModifie.getGenre());
+            response.put("datePublication", livreModifie.getDatePublication());
+            response.put("disponible", livreModifie.getDisponible());
+            response.put("auteurId", livreModifie.getAuteurId());
+            response.put("nomAuteur", livreModifie.getNomAuteur());
+            response.put("message", "Livre modifié avec succès");
+
+            return ResponseEntity.ok(response);
         } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Livre non trouvé ou erreur lors de la modification : " + e.getMessage());
+                    .body(Map.of("error", "Livre non trouvé ou erreur lors de la modification"));
         }
     }
 
-    /**
-     * Supprimer un livre par ID
-     * DELETE /api/livres/{id}
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> supprimerLivre(@PathVariable Long id) {
         try {
             livreService.supprimerLivre(id);
-            return ResponseEntity.ok("Livre supprimé avec succès");
+            return ResponseEntity.ok(Map.of("message", "Livre supprimé avec succès"));
         } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Livre non trouvé ou erreur lors de la suppression : " + e.getMessage());
+                    .body(Map.of("error", "Livre non trouvé"));
         }
     }
 
-    /**
-     * Supprimer un livre par titre et auteur
-     * DELETE /api/livres/par-titre-auteur?titre=...&auteur=...
-     */
     @DeleteMapping("/par-titre-auteur")
     public ResponseEntity<?> supprimerLivreParTitreEtAuteur(
             @RequestParam String titre,
             @RequestParam String auteur) {
         try {
             livreService.supprimerLivreParTitreEtAuteur(titre, auteur);
-            return ResponseEntity.ok("Livre '" + titre + "' par " + auteur + " supprimé avec succès");
+            return ResponseEntity.ok(Map.of("message",
+                    "Livre '" + titre + "' par " + auteur + " supprimé avec succès"));
         } catch (BusinessException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Livre non trouvé ou erreur lors de la suppression : " + e.getMessage());
+                    .body(Map.of("error", "Livre non trouvé"));
         }
     }
 
+    // ==================== GESTION DES ERREURS ====================
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<?> handleValidationErrors(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "Erreurs de validation",
+                "details", errors,
+                "timestamp", LocalDateTime.now()
+        ));
+    }
 }

@@ -2,6 +2,7 @@ package sn.unchk.bibliotheque.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import sn.unchk.bibliotheque.dto.LivreDTO;
 import sn.unchk.bibliotheque.entity.Auteur;
@@ -54,39 +55,71 @@ public class LivreService {
      * Ajouter un nouveau livre
      */
     public Livre ajouterLivre(LivreDTO livreDTO) {
+
+
         // Validation des données d'entrée
         if (livreDTO.getTitre() == null || livreDTO.getTitre().trim().isEmpty()) {
             throw new BusinessException("Le titre du livre est obligatoire");
         }
-
-        if (livreDTO.getNomAuteur() == null || livreDTO.getNomAuteur().trim().isEmpty()) {
-            throw new BusinessException("Le nom de l'auteur est obligatoire");
+        if (livreDTO.getAuteurId() == null) {
+            throw new BusinessException("L'ID de l'auteur est obligatoire");
         }
+       /* if (livreDTO.getNomAuteur() == null || livreDTO.getNomAuteur().trim().isEmpty()) {
+            throw new BusinessException("Le nom de l'auteur est obligatoire");
+        }*/
 
-        // Vérifier que l'auteur existe
-        Auteur auteur = obtenirAuteurParNom(livreDTO.getNomAuteur());
-        List<Livre> livresExistants = livreRepository.findByAuteur(auteur);
+        // Récupérer l'auteur par son nom et obtenir son ID
+       // Auteur auteur = obtenirAuteurParNom(livreDTO.getNomAuteur());
+        // Récupérer l'auteur par son ID (clé étrangère)
+        Auteur auteur = auteurService.obtenirAuteurParId(livreDTO.getAuteurId());
 
-        boolean livreExiste = livresExistants.stream()
+
+        if (auteur == null) {
+            throw new BusinessException("Auteur non trouvé avec l'ID : " + livreDTO.getAuteurId());
+        }
+        // Vérifier l'unicité du livre (titre + auteur)
+        boolean livreExiste = livreRepository.findByAuteur(auteur).stream()
                 .anyMatch(livre -> livre.getTitre().equalsIgnoreCase(livreDTO.getTitre().trim()));
 
         if (livreExiste) {
-            throw new BusinessException("Un livre avec ce titre et cet auteur existe déjà");
+            throw new BusinessException(
+                    String.format("Un livre avec le titre '%s' existe déjà pour l'auteur '%s'",
+                            livreDTO.getTitre().trim(), auteur.getNom())
+            );
         }
 
-        // Créer le nouveau livre
+        // Validation optionnelle de la date de publication
+        if (livreDTO.getDatePublication() != null &&
+                livreDTO.getDatePublication().isAfter(LocalDate.now())) {
+            throw new BusinessException("La date de publication ne peut pas être dans le futur");
+        }
+
+        // Créer le nouveau livre avec la clé étrangère (auteur.getId())
         Livre nouveauLivre = new Livre();
         nouveauLivre.setTitre(livreDTO.getTitre().trim());
-        nouveauLivre.setAuteur(auteur);
+        nouveauLivre.setAuteur(auteur); // JPA utilise automatiquement auteur.getId() comme clé étrangère
         nouveauLivre.setGenre(livreDTO.getGenre() != null ? livreDTO.getGenre().trim() : null);
         nouveauLivre.setDatePublication(livreDTO.getDatePublication());
-        nouveauLivre.setDisponible(true); // Par défaut, un nouveau livre est disponible
+        nouveauLivre.setDisponible(true);
 
-        Livre livreSauve = livreRepository.save(nouveauLivre);
+        try {
+            Livre livreSauve = livreRepository.save(nouveauLivre);
 
-        System.out.println("Nouveau livre créé avec l'ID : " + livreSauve.getId());
-        return livreSauve;
+            System.out.println(String.format(
+                    "Nouveau livre créé - ID: %d, Titre: '%s', Auteur: '%s' (ID: %d)",
+                    livreSauve.getId(),
+                    livreSauve.getTitre(),
+                    auteur.getNom(),
+                    auteur.getId()
+            ));
+
+            return livreSauve;
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException("Erreur lors de la sauvegarde du livre : " + e.getMessage());
+        }
     }
+
+
 
     /**
      * Modifier les détails d'un livre
@@ -101,12 +134,14 @@ public class LivreService {
             throw new BusinessException("Le titre du livre est obligatoire");
         }
 
-        if (livreDTO.getNomAuteur() == null || livreDTO.getNomAuteur().trim().isEmpty()) {
+       /* if (livreDTO.getNomAuteur() == null || livreDTO.getNomAuteur().trim().isEmpty()) {
             throw new BusinessException("Le nom de l'auteur est obligatoire");
-        }
+        }*/
 
         // Vérifier que l'auteur existe
-        Auteur auteur = obtenirAuteurParNom(livreDTO.getNomAuteur());
+        //Auteur auteur = obtenirAuteurParNom(livreDTO.getNomAuteur());
+
+        Auteur auteur = auteurService.obtenirAuteurParId(livreDTO.getAuteurId());
 
         // Vérifier qu'un autre livre avec le même titre et auteur n'existe pas
         if (!livre.getTitre().equalsIgnoreCase(livreDTO.getTitre().trim()) ||

@@ -41,4 +41,5 @@ public class AuteurDTO {
     public void setDateNaissance(LocalDate dateNaissance) {
         this.dateNaissance = dateNaissance;
     }
+
 }

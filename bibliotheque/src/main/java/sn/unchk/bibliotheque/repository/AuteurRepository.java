@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface AuteurRepository extends JpaRepository<Auteur, Long> {
 
+
     // Recherche par nom (insensible à la casse)
     List<Auteur> findByNomContainingIgnoreCase(String nom);
 

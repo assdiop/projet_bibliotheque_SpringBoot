@@ -1,5 +1,7 @@
 package sn.unchk.bibliotheque.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -25,11 +27,16 @@ public class Livre {
     @Column(nullable = false)
     private Boolean disponible = true;
 
+    // Gardez l'auteurId visible
+    private Long auteurId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "auteur_id", nullable = false)
+    @JsonBackReference // AJOUT: Évite la sérialisation de l'auteur complet (empêche la référence circulaire)
     private Auteur auteur;
 
     @OneToMany(mappedBy = "livre", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore // AJOUT: Ignore les emprunts pour éviter d'autres références circulaires
     private List<Emprunt> emprunts = new ArrayList<>();
 
     // Constructeurs
@@ -64,6 +71,19 @@ public class Livre {
 
     public List<Emprunt> getEmprunts() { return emprunts; }
     public void setEmprunts(List<Emprunt> emprunts) { this.emprunts = emprunts; }
+
+
+    // Méthodes utiles pour accéder aux infos de l'auteur (ajout pour compensation)
+    //@JsonIgnore
+    public Long getAuteurId() {
+        return auteur != null ? auteur.getId() : null;
+    }
+
+    @JsonIgnore
+    public String getNomAuteur() {
+        return auteur != null ? auteur.getNom() : null;
+    }
+
 
     // Méthodes utiles
     public boolean estDisponible() {

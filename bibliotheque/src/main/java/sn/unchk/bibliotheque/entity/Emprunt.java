@@ -1,5 +1,6 @@
 package sn.unchk.bibliotheque.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import sn.unchk.bibliotheque.enums.StatutEmprunt;
 
@@ -20,10 +21,12 @@ public class Emprunt {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utilisateur_id", nullable = false)
+    @JsonIgnore // AJOUT: Évite la référence circulaire avec Utilisateur
     private Utilisateur utilisateur;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "livre_id", nullable = false)
+    @JsonIgnore // AJOUT: Évite la référence circulaire avec Livre
     private Livre livre;
 
     @Enumerated(EnumType.STRING)
@@ -60,6 +63,25 @@ public class Emprunt {
 
     public StatutEmprunt getStatut() { return statut; }
     public void setStatut(StatutEmprunt statut) { this.statut = statut; }
+
+    // Méthodes pour accéder aux infos sans référence circulaire (AJOUT)
+    public Long getUtilisateurId() {
+        return utilisateur != null ? utilisateur.getId() : null;
+    }
+
+    public String getNomUtilisateur() {
+        return utilisateur != null ? utilisateur.getNom() : null;
+    }
+
+    public Long getLivreId() {
+        return livre != null ? livre.getId() : null;
+    }
+
+    public String getTitreLivre() {
+        return livre != null ? livre.getTitre() : null;
+    }
+
+
 
     // Méthodes métier
     public LocalDate getDateLimiteRetour() {

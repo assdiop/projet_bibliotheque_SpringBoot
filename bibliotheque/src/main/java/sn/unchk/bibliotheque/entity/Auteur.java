@@ -1,5 +1,6 @@
 package sn.unchk.bibliotheque.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class Auteur {
     private LocalDate dateNaissance;
 
     @OneToMany(mappedBy = "auteur", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference   //Gère le côté "parent" de la relation
     private List<Livre> livres = new ArrayList<>();
 
     // Constructeurs
