@@ -31,9 +31,15 @@ public class Utilisateur {
 	private Boolean enabled;
 	private String email;
 	
-	@ManyToMany(cascade=CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinTable(name="user_role",joinColumns = @JoinColumn(name="user_id") ,
-	inverseJoinColumns = @JoinColumn(name="role_id"))
+	@ManyToMany(
+		    fetch = FetchType.LAZY,
+		    cascade = { CascadeType.PERSIST, CascadeType.MERGE }
+	)
+	@JoinTable(
+		    name = "user_role",
+		    joinColumns = @JoinColumn(name = "user_id"),
+		    inverseJoinColumns = @JoinColumn(name = "role_id")
+	)
 	private List<Role> roles;
 
 }

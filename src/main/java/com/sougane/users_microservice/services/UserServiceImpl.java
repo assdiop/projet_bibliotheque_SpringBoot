@@ -15,7 +15,6 @@ import com.sougane.users_microservice.repository.RoleRepository;
 import com.sougane.users_microservice.repository.UtilisateurRepository;
 import com.sougane.users_microservice.services.exceptions.EmailAlreadyExistsException;
 import com.sougane.users_microservice.services.register.RegistrationRequest;
-import com.sougane.users_microservice.services.register.VerificationTokenRepository;
 
 @Transactional
 @Service
@@ -29,9 +28,6 @@ public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	BCryptPasswordEncoder bCryptPasswordEncoder;
-	
-	@Autowired
-	VerificationTokenRepository verificationTokenRepo;
 	
 
 	@Override
